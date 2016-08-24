@@ -35,11 +35,11 @@ namespace BingAdsConsoleApp
             //new BingAdsExamplesLibrary.V10.Targets(),
             //new BingAdsExamplesLibrary.V10.BulkNegativeSites(),
             //new BingAdsExamplesLibrary.GeographicalLocations(),
-            new BingAdsExamplesLibrary.V9.SearchUserAccounts(),
+            //new BingAdsExamplesLibrary.V9.SearchUserAccounts(),
             //new BingAdsExamplesLibrary.V9.InviteUser(),
             //new BingAdsExamplesLibrary.V9.CustomerSignup(),
             //new BingAdsExamplesLibrary.V9.ManageClient(),
-            //new BingAdsExamplesLibrary.V9.ReportRequests(),
+            new BingAdsExamplesLibrary.V9.ReportRequests(),
 
         };
 
@@ -102,18 +102,19 @@ namespace BingAdsConsoleApp
 
         private static Authentication AuthenticateWithOAuth()
         {
-            var oAuthDesktopMobileAuthCodeGrant = new OAuthDesktopMobileAuthCodeGrant(Settings.Default["ClientId"].ToString());
-
+            var webCodeGrant = new OAuthWebAuthCodeGrant(Settings.Default["ClientId"].ToString(),
+                Settings.Default["ClientSecret"].ToString(), new Uri(Settings.Default["OAuthRedirectUri"].ToString()));
+            
             // It is recommended that you specify a non guessable 'state' request parameter to help prevent
             // cross site request forgery (CSRF). 
-            oAuthDesktopMobileAuthCodeGrant.State = ClientState;
+            webCodeGrant.State = ClientState;
 
             string refreshToken;
 
             // If you have previously securely stored a refresh token, try to use it.
             if (GetRefreshToken(out refreshToken))
             {
-                AuthorizeWithRefreshTokenAsync(oAuthDesktopMobileAuthCodeGrant, refreshToken).Wait();
+                AuthorizeWithRefreshTokenAsync(webCodeGrant, refreshToken).Wait();
             }
             else
             {
@@ -123,25 +124,25 @@ namespace BingAdsConsoleApp
                     "The Bing Ads user must provide consent for your application to access their Bing Ads accounts.\n" +
                     "Open a new web browser and navigate to {0}.\n\n" +
                     "After the user has granted consent in the web browser for the application to access their Bing Ads accounts, " +
-                    "please enter the response URI that includes the authorization 'code' parameter: \n", oAuthDesktopMobileAuthCodeGrant.GetAuthorizationEndpoint()));
+                    "please enter the response URI that includes the authorization 'code' parameter: \n", webCodeGrant.GetAuthorizationEndpoint()));
 
                 // Request access and refresh tokens using the URI that you provided manually during program execution.
                 var responseUri = new Uri(Console.ReadLine());
 
-                if (oAuthDesktopMobileAuthCodeGrant.State != ClientState)
+                if (webCodeGrant.State != ClientState)
                     throw new HttpRequestException("The OAuth response state does not match the client request state.");
 
-                oAuthDesktopMobileAuthCodeGrant.RequestAccessAndRefreshTokensAsync(responseUri).Wait();
+                webCodeGrant.RequestAccessAndRefreshTokensAsync(responseUri).Wait();
             }
 
             // It is important to save the most recent refresh token whenever new OAuth tokens are received. 
             // You will want to subscribe to the NewOAuthTokensReceived event handler. 
             // When calling Bing Ads services with ServiceClient<TService>, BulkServiceManager, or ReportingServiceManager, 
             // each instance will refresh your access token automatically if they detect the AuthenticationTokenExpired (109) error code. 
-            oAuthDesktopMobileAuthCodeGrant.NewOAuthTokensReceived +=
+            webCodeGrant.NewOAuthTokensReceived +=
                     (sender, tokens) => SaveRefreshToken(tokens.NewRefreshToken);
 
-            return oAuthDesktopMobileAuthCodeGrant;
+            return webCodeGrant;
         }
 
         private static Authentication AuthenticateWithUserName()
@@ -185,7 +186,7 @@ namespace BingAdsConsoleApp
             }
         }
 
-        private static Task<OAuthTokens> AuthorizeWithRefreshTokenAsync(OAuthDesktopMobileAuthCodeGrant authentication, string refreshToken)
+        private static Task<OAuthTokens> AuthorizeWithRefreshTokenAsync(OAuthWebAuthCodeGrant authentication, string refreshToken)
         {
             return authentication.RequestAccessAndRefreshTokensAsync(refreshToken);
         }
@@ -219,8 +220,11 @@ namespace BingAdsConsoleApp
             var accounts = await SearchAccountsByUserIdAsync(user.Id);
             if (accounts.Length <= 0) return;
 
-            _authorizationData.AccountId = (long)accounts[0].Id;
-            _authorizationData.CustomerId = (int)accounts[0].ParentCustomerId;
+            const int selectedAccountId = 0; // put the accountId here
+            var selectedAccount = accounts.FirstOrDefault(e => e.Id == selectedAccountId) ?? accounts[0];
+
+            _authorizationData.AccountId = (long)selectedAccount.Id;
+            _authorizationData.CustomerId = (int)selectedAccount.ParentCustomerId;
 
             return;
         }
@@ -258,7 +262,7 @@ namespace BingAdsConsoleApp
             var paging = new Paging
             {
                 Index = 0,
-                Size = 10
+                Size = 1000
             };
 
             var request = new SearchAccountsRequest
@@ -288,11 +292,20 @@ namespace BingAdsConsoleApp
 
         public static string Unprotect(this string protectedString)
         {
-            var protectedBytes = Convert.FromBase64String(protectedString);
+            try
+            {
+                var protectedBytes = Convert.FromBase64String(protectedString);
 
-            var unprotectedBytes = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
+                var unprotectedBytes = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
 
-            return Encoding.Unicode.GetString(unprotectedBytes);
+                return Encoding.Unicode.GetString(unprotectedBytes);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("Error while un-protecting string : " + ex.Message);
+                return protectedString;
+            }
+            
         }
     }
 }

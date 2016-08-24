@@ -22,7 +22,7 @@ namespace BingAdsExamplesLibrary.V9
         /// <summary>
         /// The directory for the report file.
         /// </summary>
-        protected const string FileDirectory = @"c:\reports\";
+        protected const string FileDirectory = @"D:\reports\";
         
         /// <summary>
         /// The name of the report file.
@@ -505,7 +505,7 @@ namespace BingAdsExamplesLibrary.V9
         {
             var report = new AccountPerformanceReportRequest
             {
-                Format = ReportFormat.Tsv,
+                Format = ReportFormat.Csv,
                 Language = ReportLanguage.English,
                 ReportName = "My Account Performance Report",
                 ReturnOnlyCompleteData = false,
