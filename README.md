@@ -1,4 +1,9 @@
 
+# Setup
+* Build `BingAdsApiSDK.sln`
+* Open `BingAdsExamples.sln` and Build
+* `BingAdsConsoleApp` : Change the app and auth details `Settings` in `App.Config` or use the `Settings` designer view
+
 # Bing Ads .NET SDK
 
 You can develop Bing Ads applications with any programming language that supports web services. The Bing Ads .NET Software Development Kit (SDK) enhances the experience of developing Bing Ads applications with any .NET programming language. The SDK includes a proxy to all Bing Ads API web services and abstracts low level details of authentication with OAuth. You can use the high level BulkServiceManager and ReportingServiceManager interfaces to abstract and execute operations in the low level Bulk and Reporting services. For example instead of calling SubmitGenerateReport and PollGenerateReport to download a report, you download a report using one method with the ReportingServiceManager class. For more information, see [Bing Ads Client Libraries](https://msdn.microsoft.com/en-US/library/bing-ads-client-libraries.aspx) on MSDN.
